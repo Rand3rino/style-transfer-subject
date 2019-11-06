@@ -15,9 +15,9 @@ import time
 ## Specify paths for 1) content image 2) style image and 3) generated image
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
-cImPath = ''
-sImPath = ''
-genImOutputPath = ''
+cImPath = 'dataset/training_set/dogs/dog.1.jpg'
+sImPath = 'Styles/tsunami.jpg'
+genImOutputPath = 'result.jpg'
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Image processing
@@ -73,7 +73,7 @@ def get_style_loss(ws, Gs, As):
         N_l = K.int_shape(G)[0]
         G_gram = get_Gram_matrix(G)
         A_gram = get_Gram_matrix(A)
-        sLoss+= w*0.25*K.sum(K.square(G_gram - A_gram))/ (N_l**2 * M_l**2)
+        sLoss += w*0.25*K.sum(K.square(G_gram - A_gram))/ (N_l**2 * M_l**2)
     return sLoss
 
 def get_total_loss(gImPlaceholder, alpha=1.0, beta=10000.0):
@@ -144,13 +144,13 @@ P = get_feature_reps(x=cImArr, layer_names=[cLayerName], model=cModel)[0]
 As = get_feature_reps(x=sImArr, layer_names=sLayerNames, model=sModel)
 ws = np.ones(len(sLayerNames))/float(len(sLayerNames))
 
-iterations = 600
+iterations = 6
 x_val = gIm0.flatten()
 start = time.time()
 xopt, f_val, info= fmin_l_bfgs_b(calculate_loss, x_val, fprime=get_grad,
                             maxiter=iterations, disp=True)
 xOut = postprocess_array(xopt)
 xIm = save_original_size(xOut)
-print 'Image saved'
+print('Image saved')
 end = time.time()
-print 'Time taken: {}'.format(end-start)
+print('Time taken: {}'.format(end-start))
