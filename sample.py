@@ -9,15 +9,16 @@ from keras.applications import VGG16
 from keras.applications.vgg16 import preprocess_input
 from keras.layers import Input
 from scipy.optimize import fmin_l_bfgs_b
+import os
 import time
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Specify paths for 1) content image 2) style image and 3) generated image
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-
-cImPath = 'dataset/training_set/dogs/dog.1.jpg'
-sImPath = 'Styles/tsunami.jpg'
-genImOutputPath = 'result.jpg'
+path = os.getcwd()
+cImPath = path + '/dataset/training_set/dogs/dog.1.jpg'
+sImPath = path + '/Styles/tsunami.jpg'
+genImOutputPath = path + 'result.jpg'
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Image processing
@@ -39,7 +40,7 @@ sImArr = K.variable(preprocess_input(np.expand_dims(sImArr, axis=0)), dtype='flo
 gIm0 = np.random.randint(256, size=(targetWidth, targetHeight, 3)).astype('float64')
 gIm0 = preprocess_input(np.expand_dims(gIm0, axis=0))
 
-gImPlaceholder = K.placeholder(shape=(1, targetWidth, targetHeight, 3))
+gImPlaceholder = K.placeholder(dtype="float",shape=(1, targetWidth, targetHeight, 3))
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Define loss and helper functions
@@ -73,7 +74,7 @@ def get_style_loss(ws, Gs, As):
         N_l = K.int_shape(G)[0]
         G_gram = get_Gram_matrix(G)
         A_gram = get_Gram_matrix(A)
-        sLoss += w*0.25*K.sum(K.square(G_gram - A_gram))/ (N_l**2 * M_l**2)
+        sLoss = sLoss +  w*0.25*K.sum(K.square(G_gram - A_gram))/ (N_l**2 * M_l**2)
     return sLoss
 
 def get_total_loss(gImPlaceholder, alpha=1.0, beta=10000.0):
@@ -107,9 +108,9 @@ def postprocess_array(x):
     # Zero-center by mean pixel
     if x.shape != (targetWidth, targetHeight, 3):
         x = x.reshape((targetWidth, targetHeight, 3))
-    x[..., 0] += 103.939
-    x[..., 1] += 116.779
-    x[..., 2] += 123.68
+    x[..., 0] = x[..., 0] + 103.939
+    x[..., 1] = x[..., 1] + 116.779
+    x[..., 2] = x[..., 2] + 123.68
     # 'BGR'->'RGB'
     x = x[..., ::-1]
     x = np.clip(x, 0, 255)
@@ -144,7 +145,7 @@ P = get_feature_reps(x=cImArr, layer_names=[cLayerName], model=cModel)[0]
 As = get_feature_reps(x=sImArr, layer_names=sLayerNames, model=sModel)
 ws = np.ones(len(sLayerNames))/float(len(sLayerNames))
 
-iterations = 6
+iterations = 50
 x_val = gIm0.flatten()
 start = time.time()
 xopt, f_val, info= fmin_l_bfgs_b(calculate_loss, x_val, fprime=get_grad,
