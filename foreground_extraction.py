@@ -4,18 +4,18 @@ import numpy as np
 ## AS FOUND AT: https://stackoverflow.com/questions/29313667/how-do-i-remove-the-background-from-this-kind-of-image
 
 #== Parameters =======================================================================
-BLUR = 21
-CANNY_THRESH_1 = 10
-CANNY_THRESH_2 = 200
+BLUR = 15
+CANNY_THRESH_1 = 100
+CANNY_THRESH_2 = 100
 MASK_DILATE_ITER = 10
-MASK_ERODE_ITER = 10
+MASK_ERODE_ITER = 15
 MASK_COLOR = (0.0,0.0,1.0) # In BGR format
 
 
 #== Processing =======================================================================
 
 #-- Read image -----------------------------------------------------------------------
-img = cv2.imread('C:/Temp/person.jpg')
+img = cv2.imread('dataset/training_set/dogs/dog.175.jpg')
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
 #-- Edge detection -------------------------------------------------------------------
@@ -25,7 +25,7 @@ edges = cv2.erode(edges, None)
 
 #-- Find contours in edges, sort by area ---------------------------------------------
 contour_info = []
-_, contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 # Previously, for a previous version of cv2, this line was: 
 #  contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 # Thanks to notes from commenters, I've updated the code but left this note
@@ -57,6 +57,6 @@ masked = (mask_stack * img) + ((1-mask_stack) * MASK_COLOR) # Blend
 masked = (masked * 255).astype('uint8')                     # Convert back to 8-bit 
 
 cv2.imshow('img', masked)                                   # Display
-cv2.waitKey()
+cv2.waitKey(0)
 
 #cv2.imwrite('C:/Temp/person-masked.jpg', masked)           # Save
