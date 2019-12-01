@@ -1,15 +1,16 @@
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 
 ## AS FOUND AT: https://stackoverflow.com/questions/29313667/how-do-i-remove-the-background-from-this-kind-of-image
 
 #== Parameters =======================================================================
 BLUR = 15
 CANNY_THRESH_1 = 100
-CANNY_THRESH_2 = 100
+CANNY_THRESH_2 = 450
 MASK_DILATE_ITER = 10
 MASK_ERODE_ITER = 15
-MASK_COLOR = (0.0,0.0,1.0) # In BGR format
+MASK_COLOR = (1.0,0.0,0.0) # In RGB format
 
 
 #== Processing =======================================================================
@@ -56,7 +57,17 @@ img         = img.astype('float32') / 255.0                 #  for easy blending
 masked = (mask_stack * img) + ((1-mask_stack) * MASK_COLOR) # Blend
 masked = (masked * 255).astype('uint8')                     # Convert back to 8-bit 
 
-cv2.imshow('img', masked)                                   # Display
-cv2.waitKey(0)
+# split image into channels
+c_red, c_green, c_blue = cv2.split(img)
+
+# merge with mask got on one of a previous steps
+img_a = cv2.merge((c_red, c_green, c_blue, mask.astype('float32') / 255.0))
+
+plt.imshow(img_a)
+plt.show()
+plt.imsave('dog_transparent.png',img_a)
+
+#cv2.imshow('img', masked)                                   # Display
+#cv2.waitKey(0)
 
 #cv2.imwrite('C:/Temp/person-masked.jpg', masked)           # Save

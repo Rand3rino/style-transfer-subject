@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from PIL import Image
 from keras import backend as K
 from keras.preprocessing.image import load_img, img_to_array
@@ -10,13 +11,21 @@ from keras.applications.vgg16 import preprocess_input
 from keras.layers import Input
 from scipy.optimize import fmin_l_bfgs_b
 import time
+import os
+
+# Limit GPU memory usage
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=.33)
+sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Specify paths for 1) content image 2) style image and 3) generated image
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-cImPath = 'dataset/training_set/dogs/dog.1.jpg'
-sImPath = 'Styles/tsunami.jpg'
-genImOutputPath = 'result.jpg'
+cImPath = 'dog_transparent.png'
+sImPath = []
+sImPath.append('Styles/tsunami.jpg')
+sImPath.append('Styles/the_scream.jpg')
+genImOutputPath = 'resultDog600.jpg'
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Image processing
@@ -31,9 +40,13 @@ cImage = load_img(path=cImPath, target_size=targetSize)
 cImArr = img_to_array(cImage)
 cImArr = K.variable(preprocess_input(np.expand_dims(cImArr, axis=0)), dtype='float32')
 
-sImage = load_img(path=sImPath, target_size=targetSize)
-sImArr = img_to_array(sImage)
-sImArr = K.variable(preprocess_input(np.expand_dims(sImArr, axis=0)), dtype='float32')
+sImage = []
+sImArr = []
+
+for i in range(len(sImPath)):
+	sImage.append(load_img(path=sImPath[i], target_size=targetSize))
+	sImArr.append(img_to_array(sImage[i]))
+	sImArr[i] = K.variable(preprocess_input(np.expand_dims(sImArr[i], axis=0)), dtype='float32')
 
 gIm0 = np.random.randint(256, size=(targetWidth, targetHeight, 3)).astype('float64')
 gIm0 = preprocess_input(np.expand_dims(gIm0, axis=0))
@@ -79,7 +92,11 @@ def get_total_loss(gImPlaceholder, alpha=1.0, beta=10000.0):
     F = get_feature_reps(gImPlaceholder, layer_names=[cLayerName], model=gModel)[0]
     Gs = get_feature_reps(gImPlaceholder, layer_names=sLayerNames, model=gModel)
     contentLoss = get_content_loss(F, P)
-    styleLoss = get_style_loss(ws, Gs, As)
+    styleLossArr = []
+    styleLoss = 0
+    for i in range(len(sImPath)):
+        styleLossArr.append(get_style_loss(ws, Gs, As[i]))
+        styleLoss = styleLoss + styleLossArr[i]
     totalLoss = alpha*contentLoss + beta*styleLoss
     return totalLoss
 
@@ -120,15 +137,17 @@ def reprocess_array(x):
     x = preprocess_input(x)
     return x
 
-def save_original_size(x, target_size=cImageSizeOrig):
+def save_original_size(x, iter, target_size=cImageSizeOrig):
     xIm = Image.fromarray(x)
     xIm = xIm.resize(target_size)
-    xIm.save(genImOutputPath)
+    xIm.save('Results/resultTsunamiScreamDog%d.jpg' % (iter))
     return xIm
 
 tf_session = K.get_session()
 cModel = VGG16(include_top=False, weights='imagenet', input_tensor=cImArr)
-sModel = VGG16(include_top=False, weights='imagenet', input_tensor=sImArr)
+sModel = []
+for i in range(len(sImPath)):
+	sModel.append(VGG16(include_top=False, weights='imagenet', input_tensor=sImArr[i]))
 gModel = VGG16(include_top=False, weights='imagenet', input_tensor=gImPlaceholder)
 cLayerName = 'block4_conv2'
 sLayerNames = [
@@ -140,16 +159,19 @@ sLayerNames = [
                 ]
 
 P = get_feature_reps(x=cImArr, layer_names=[cLayerName], model=cModel)[0]
-As = get_feature_reps(x=sImArr, layer_names=sLayerNames, model=sModel)
+As = []
+for i in range(len(sImPath)):
+	As.append(get_feature_reps(x=sImArr[i], layer_names=sLayerNames, model=sModel[i]))
 ws = np.ones(len(sLayerNames))/float(len(sLayerNames))
 
-iterations = 10
+iterationsX25 = 6 
 x_val = gIm0.flatten()
-start = time.time()
-xopt, f_val, info= fmin_l_bfgs_b(calculate_loss, x_val, fprime=get_grad,
-                            maxiter=iterations, disp=True)
-xOut = postprocess_array(xopt)
-xIm = save_original_size(xOut)
-print('Image saved')
-end = time.time()
-print('Time taken: {}'.format(end-start))
+for iteration in range(1, iterationsX25):
+	start = time.time()
+	xopt, f_val, info= fmin_l_bfgs_b(calculate_loss, x_val, fprime=get_grad,
+		                    maxiter=iteration * 100, disp=True)
+	xOut = postprocess_array(xopt)
+	xIm = save_original_size(xOut, iteration*100)
+	print('Image saved')
+	end = time.time()
+	print('Time taken: {}'.format(end-start))
