@@ -13,19 +13,18 @@ from scipy.optimize import fmin_l_bfgs_b
 import time
 import os
 
-# Limit GPU memory usage
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+# Select GPU and limit memory usage
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=.33)
 sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-## Specify paths for 1) content image 2) style image and 3) generated image
+## Specify paths for 1) content image 2) style image
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
-cImPath = 'dog_transparent.png'
+cImPath = 'dataset/training_set/dogs/dog.175.jpg'
 sImPath = []
 sImPath.append('Styles/tsunami.jpg')
 sImPath.append('Styles/the_scream.jpg')
-genImOutputPath = 'resultDog600.jpg'
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ## Image processing
@@ -164,14 +163,22 @@ for i in range(len(sImPath)):
 	As.append(get_feature_reps(x=sImArr[i], layer_names=sLayerNames, model=sModel[i]))
 ws = np.ones(len(sLayerNames))/float(len(sLayerNames))
 
-iterationsX25 = 6 
+# Allows saving images at increasing runtimes
+iterations = 1 
+base = 200
 x_val = gIm0.flatten()
-for iteration in range(1, iterationsX25):
+for iteration in range(1, iterations+1):
 	start = time.time()
 	xopt, f_val, info= fmin_l_bfgs_b(calculate_loss, x_val, fprime=get_grad,
-		                    maxiter=iteration * 100, disp=True)
+		                    maxiter=iteration * base, disp=True)
 	xOut = postprocess_array(xopt)
-	xIm = save_original_size(xOut, iteration*100)
+	xIm = save_original_size(xOut, iteration*base)
 	print('Image saved')
 	end = time.time()
 	print('Time taken: {}'.format(end-start))
+
+# https://stackoverflow.com/questions/10640114/overlay-two-same-sized-images-in-python
+background = Image.open('Results/resultTsunamiScreamDog%d.jpg' % (iterations * base))
+foreground = Image.open('dogTransparent.png')
+background.paste(foreground, (0,0), foreground)
+background.save('ArtDog.png', 'PNG')

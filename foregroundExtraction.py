@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-## AS FOUND AT: https://stackoverflow.com/questions/29313667/how-do-i-remove-the-background-from-this-kind-of-image
+## FOUND AT: https://stackoverflow.com/questions/29313667/how-do-i-remove-the-background-from-this-kind-of-image
 
 #== Parameters =======================================================================
 BLUR = 15
@@ -65,7 +65,7 @@ img_a = cv2.merge((c_red, c_green, c_blue, mask.astype('float32') / 255.0))
 
 plt.imshow(img_a)
 plt.show()
-plt.imsave('dog_transparent.png',img_a)
+plt.imsave('dogTransparent.png',img_a)
 
 #cv2.imshow('img', masked)                                   # Display
 #cv2.waitKey(0)
